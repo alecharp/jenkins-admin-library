@@ -1,26 +1,30 @@
 #!/usr/bin/env groovy
 
 def call() {
-  jenkins.model.Jenkins.getInstance().getUpdateCenter().getSites().each { site ->
-    site.updateDirectlyNow(hudson.model.DownloadService.signatureCheck)
+  stage('Update Plugin Manager') {
+    jenkins.model.Jenkins.getInstance().getUpdateCenter().getSites().each { site ->
+      site.updateDirectlyNow(hudson.model.DownloadService.signatureCheck)
+    }
+
+    hudson.model.DownloadService.Downloadable.all().each { downloadable ->
+      downloadable.updateNow();
+    }
   }
 
-  hudson.model.DownloadService.Downloadable.all().each { downloadable ->
-    downloadable.updateNow();
+  stage('List plugins to update') {
+    def plugins = jenkins.model.Jenkins.instance.pluginManager.activePlugins
+      .findAll { it -> it.hasUpdate() }
+      .collect { pl -> pl.getShortName() }
+    println "Plugins to upgrade: ${plugins.join(', ')}"
   }
 
-  def plugins = jenkins.model.Jenkins.instance.pluginManager.activePlugins.findAll {
-    it -> it.hasUpdate()
-  }.collect {
-    it -> it.getShortName()
-  }
-
-  println "Plugins to upgrade: ${plugins}"
   long count = 0
 
-  jenkins.model.Jenkins.instance.pluginManager.install(plugins, false).each { f ->
-    f.get()
-    println "${++count}/${plugins.size()}.."
+  stage('Update plugins') {
+    jenkins.model.Jenkins.instance.pluginManager.install(plugins, false).each { f ->
+      f.get()
+      println "${++count}/${plugins.size()}.."
+    }
   }
 
   if(plugins.size() != 0 && count == plugins.size()) {
