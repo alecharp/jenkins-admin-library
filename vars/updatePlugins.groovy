@@ -13,7 +13,7 @@ def call() {
 
   stage('List plugins to update') {
     def plugins = jenkins.model.Jenkins.instance.pluginManager.activePlugins
-      .findAll { it -> it.hasUpdate() }
+      .findAll { pl -> pl.hasUpdate() }
       .collect { pl -> pl.getShortName() }
     println "Plugins to upgrade: ${plugins.join(', ')}"
   }
